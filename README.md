@@ -1,2 +1,3 @@
-# S.O.
-Esame di sistemi operativi
+# SHELL
+Shell a due comandi
+
