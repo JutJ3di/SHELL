@@ -1,3 +1,4 @@
 # SHELL
-Shell a due comandi
+Shell per linux
+
 
