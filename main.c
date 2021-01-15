@@ -1,91 +1,102 @@
-#include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
+#include <assert.h>
+#include <string.h>
+#include <unistd.h> 
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <unistd.h>
-#include <errno.h>
 
-int main()
-{
-	char c = '\0';
-	char buff[128];
-	char *argv[3];
-	int argc = 0;
-	int indexf,indexs;
-	int cpid;
-
-	while(1){
-
-		printf(">> ");
-		indexs = indexf = 0;
-
-		while(1){
-			c = getchar();
-			buff[indexf] = c;
-			if(c == ' ' || c=='\n'){
-				break;
-			}
-			indexf++;
-		}
-
-		if(buff[indexf]==' ')
-			argc = 2;
-		else
-			argc = 1;
-
-		buff[indexf] = '\0';
-		
-		if (strcmp(buff,"exit")==0)
-			break;	
-
-		
-
-		for(int i = 0;i < 2 ;i++){ 
-			argv[i]=(char *)malloc(sizeof(strlen(buff))+1);
-            if(!argv[i])
-                perror("out of memory");
-			strcpy(argv[i],buff);
-		}
-				
+int main() {
 	
-		if(argc == 2){
-			while(1){
-				c = getchar();
-				buff[indexs] = c;
-				if (c == '\n')
+	char *buffer = malloc(1024);
+	int buffer_size = 1024;
+	int buffer_used;
+
+	if(buffer == NULL) {
+		// out of memory
+		printf("Uoops! Out of memory!\n");
+		return -1;
+	}
+
+	int  word_offsets[128];
+	char *argv[128];
+	int  argc;
+	char c;
+	int last_argument_index;
+
+	while(1) {
+
+		argc = 0;
+		buffer_used = 0;
+		last_argument_index = -1;
+
+		printf("> ");
+
+		while(1) {
+
+			c = getc(stdin);
+
+			if(buffer_used == buffer_size) {
+
+
+				buffer = realloc(buffer, buffer_size * 2);
+				buffer_size *= 2;
+
+				if(buffer == NULL) {
+					printf("Uoops! Out of memory!\n");
+					return -1;
+				}
+
+			}
+
+			if(c == ' ' || c == '\n') {
+
+				buffer[buffer_used++] = '\0';
+
+				if(last_argument_index != -1) {
+					word_offsets[argc++] = last_argument_index;
+					last_argument_index = -1;
+				}
+
+				if(c == '\n')
 					break;
-				indexs++;
+
+			} else {
+
+				if(last_argument_index == -1)
+					last_argument_index = buffer_used;
+
+				buffer[buffer_used++] = c;
 			}
+
+
 		}
-	
-		buff[indexs] = '\0';
-		argv[2] = (char *)malloc(sizeof(strlen(buff))+1);
-        if(!argv[2])
-            perror("out of memory");
-		strcpy(argv[2],buff);
+
+		for(int i = 0; i < argc; i++)
+			argv[i] = buffer + word_offsets[i];
+		argv[argc] = NULL;
+
+		if(argc == 0)
+			continue;
+
+		// how do i get out of this loop?
+
+        if (strcmp(argv[0],"exit") == 0)
+        {
+            break;
+        }
+        
 
 
-		cpid = fork();
-        if(cpid == -1)
-            perror("figlio non creato\n");
-		if(cpid == 0){
-			if(argc == 1){
-				execlp(argv[0],argv[1],NULL);
-				exit(1);
-			}
-			else if (argc == 2){
-				execlp(argv[0],argv[1],argv[2],NULL);
-				exit(2);
-			}	
-		}else
-			wait((int *)0);
+		if(fork() == 0)
+			execvp(argv[0], argv);
 
-		for (int i = 0; i < 3; ++i)
-			free(argv[i]);
-	}	
+		wait(0);
 
+	}
 
+	free(buffer);
 
 	return 0;
 }
+
